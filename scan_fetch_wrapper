@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$1" != "run" ]; then
+	$0 run &
+	exit 0
+fi
+
 while [ 1 ];
 do
 	/home/stefan/bin/scan-fetch.py
