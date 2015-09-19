@@ -1,0 +1,7 @@
+#!/bin/bash
+
+while [ 1 ];
+do
+	/home/stefan/bin/scan-fetch.py
+	sleep 15
+done

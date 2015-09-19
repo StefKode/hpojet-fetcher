@@ -12,14 +12,15 @@ from enum import Enum
 
 ##################################################################################
 # Defines
-MNT='/mnt/hpjet-scanner/HPSCANS'
+MNT_SHARE='/mnt/hpjet-scanner'
+MNT=MNT_SHARE + '/HPSCANS'
 HOST='hpjet'
 NAS='/mnt/scknas/Seagate-ExpansionDesk-01/DOCUSYSTEM/Scanner'
 
 ##################################################################################
 # Functions
 def getFiles():
-	return sorted(glob.glob1(MNT, "*.pdf"))
+	return sorted(glob.glob1(MNT, "*scan[0-9]*.jpg"))
 
 def easyCopy(fileList, onlyFirst):
 	num  = len(fileList)
@@ -38,7 +39,7 @@ def easyCopy(fileList, onlyFirst):
 		src  = MNT  + '/' +f
 		ts   = time.time()
 		tss  = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H%M%S')
-		dest = NAS + '/' + tss + "-scan.pdf"
+		dest = NAS + '/' + tss + "-" + f
 		print('read scan file: ' + dest)
 		shutil.copyfile(src, dest)
 		try:
@@ -67,10 +68,24 @@ class States(Enum):
 def pingHost():
 	return subprocess.call(["ping", "-c", "1", "-t", "1", HOST])
 
+def mountScanner():
+	if (not os.path.isdir(MNT)):
+		print("mount scanner")
+		return subprocess.call(["mount", MNT_SHARE])
+	else:
+		print("skip mount scanner")
+		return 0
+
+def umountScanner():
+	print("umount scanner")
+	return subprocess.call(["umount", MNT_SHARE])
+
 def do_waitHost():
 	print("ping..")
 	if (pingHost() == 0):
+		mountScanner()
 		return States.waitAnyFile
+	time.sleep(30)
 	return States.waitHost
 
 def do_waitAnyFile():
@@ -81,10 +96,14 @@ def do_waitAnyFile():
 	if (len(files) > 0):
 		return States.oneFileSleep
 	time.sleep(20)
+	if (pingHost() != 0):
+		print("lost host")
+		umountScanner()
+		return States.waitHost
 	return States.waitAnyFile
 
 def do_oneFileSleep():
-	time.sleep(30)
+	time.sleep(15)
 	files = getFiles()
 	print(files)
 	if (len(files) > 1):
